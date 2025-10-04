@@ -70,3 +70,21 @@ func handlerResetUsers(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerGetUsers(s *state, cmd command) error {
+	context := context.Background()
+
+	users, err := s.db.GetUsers(context)
+	if err != nil {
+		return fmt.Errorf("failed to reset users table: %w", err)
+	}
+
+	for _, user := range users {
+		if user.Name == s.cfg.CurrentUserName {
+			fmt.Println(user.Name, "(current)")
+		} else {
+			fmt.Println(user.Name)
+		}
+	}
+	return nil
+}
