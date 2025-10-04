@@ -1,28 +1,53 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
+	"log"
+	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/simonjwhitlock/bootdev-go-blogaggregator/internal/config"
+	"github.com/simonjwhitlock/bootdev-go-blogaggregator/internal/database"
 )
 
+type state struct {
+	db  *database.Queries
+	cfg *config.Config
+}
+
 func main() {
-	jsonConf, err := config.Read()
+	cfg, err := config.Read()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatalf("error reading config: %v", err)
 	}
 
-	jsonConf.UserName = "Simon"
-
-	err = jsonConf.SetUser()
+	db, err := sql.Open("postgres", cfg.DBURL)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
+	}
+	dbQueries := database.New(db)
+
+	programState := &state{
+		db:  dbQueries,
+		cfg: &cfg,
 	}
 
-	jsonConf, err = config.Read()
-	if err != nil {
-		fmt.Println(err)
+	cmds := commands{
+		registeredCommands: make(map[string]func(*state, command) error),
 	}
-	fmt.Println("DB url:", jsonConf.DbUrl)
-	fmt.Println("UserName:", jsonConf.UserName)
+	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerCreateUser)
+	cmds.register("reset", handlerResetUsers)
+
+	if len(os.Args) < 2 {
+		log.Fatal("Usage: cli <command> [args...]")
+	}
+
+	cmdName := os.Args[1]
+	cmdArgs := os.Args[2:]
+
+	err = cmds.run(programState, command{Name: cmdName, Args: cmdArgs})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
