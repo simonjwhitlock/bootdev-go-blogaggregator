@@ -17,7 +17,7 @@ func handlerLogin(s *state, cmd command) error {
 	context := context.Background()
 	_, err := s.db.GetUser(context, name)
 	if err != nil {
-		return fmt.Errorf("User not found in database: %w", err)
+		return fmt.Errorf("user not found in database: %w", err)
 	}
 
 	err = s.cfg.SetUser(name)
