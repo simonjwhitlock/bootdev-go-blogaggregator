@@ -2,19 +2,23 @@ package main
 
 import (
 	"context"
+	"encoding/xml"
 	"fmt"
+	"html"
+	"io"
+	"net/http"
+	"time"
 )
 
 var aggURL = "https://www.wagslane.dev/index.xml"
 
-func aggFetch(s *state, cmd command) error {
-	context := context.Background()
-	feed, err := fetchFeed(context, aggURL)
+func handlerAgg(s *state, cmd command) error {
+	feed, err := fetchFeed(context.Background(), aggURL)
 	if err != nil {
 		return fmt.Errorf("error retreving rss feed: %w", err)
 	}
 
-	fmt.Println(feed)
+	fmt.Printf("Feed: %+v\n", feed)
 
 	return nil
 }
@@ -36,5 +40,40 @@ type RSSItem struct {
 }
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
-	return RSSFeed{}, nil
+	httpClient := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", "gator")
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	dat, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var rssFeed RSSFeed
+	err = xml.Unmarshal(dat, &rssFeed)
+	if err != nil {
+		return nil, err
+	}
+
+	rssFeed.Channel.Title = html.UnescapeString(rssFeed.Channel.Title)
+	rssFeed.Channel.Description = html.UnescapeString(rssFeed.Channel.Description)
+	for i, item := range rssFeed.Channel.Item {
+		item.Title = html.UnescapeString(item.Title)
+		item.Description = html.UnescapeString(item.Description)
+		rssFeed.Channel.Item[i] = item
+	}
+
+	return &rssFeed, nil
 }
