@@ -19,13 +19,12 @@ func handlerLogin(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("user not found in database: %w", err)
 	}
-
 	err = s.cfg.SetUser(name)
 	if err != nil {
 		return fmt.Errorf("couldn't set current user: %w", err)
 	}
 
-	fmt.Println("User switched successfully!")
+	fmt.Println("User switched successfully to:", name)
 	return nil
 }
 
@@ -48,19 +47,20 @@ func handlerCreateUser(s *state, cmd command) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	fmt.Println(newUser)
-
-	fmt.Println("created user: ", userName)
+	fmt.Println("created user: ", newUser.Name)
 
 	err = s.cfg.SetUser(userName)
 	if err != nil {
 		return fmt.Errorf("couldn't set current user: %w", err)
 	}
-	fmt.Println("User switched successfully!")
+	fmt.Println("User switched successfully to:", userName)
 	return nil
 }
 
 func handlerResetUsers(s *state, cmd command) error {
+	if len(cmd.Args) != 0 {
+		return fmt.Errorf("usage: %s", cmd.Name)
+	}
 	context := context.Background()
 
 	err := s.db.ResetUsers(context)
@@ -72,6 +72,9 @@ func handlerResetUsers(s *state, cmd command) error {
 }
 
 func handlerGetUsers(s *state, cmd command) error {
+	if len(cmd.Args) != 0 {
+		return fmt.Errorf("usage: %s", cmd.Name)
+	}
 	context := context.Background()
 
 	users, err := s.db.GetUsers(context)
