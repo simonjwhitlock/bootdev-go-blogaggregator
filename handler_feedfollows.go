@@ -9,14 +9,9 @@ import (
 	"github.com/simonjwhitlock/bootdev-go-blogaggregator/internal/database"
 )
 
-func handlerAddFeedFollow(s *state, cmd command) error {
+func handlerAddFeedFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("usage: %s <url>", cmd.Name)
-	}
-
-	currentUser, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
 	}
 
 	feed, err := s.db.GetFeed(context.Background(), cmd.Args[0])
@@ -28,7 +23,7 @@ func handlerAddFeedFollow(s *state, cmd command) error {
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 		FeedID:    feed.ID,
 	}
 
@@ -54,6 +49,24 @@ func handlerFeedsFollows(s *state, cmd command) error {
 
 	for _, feed := range follows {
 		fmt.Println(feed)
+	}
+
+	return nil
+}
+
+func handlerDeleteFeedFollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <url>", cmd.Name)
+	}
+
+	deleteFeedFollowParams := database.DeleteFeedFollowParams{
+		UserID: user.ID,
+		Url:    cmd.Args[0],
+	}
+
+	err := s.db.DeleteFeedFollow(context.Background(), deleteFeedFollowParams)
+	if err != nil {
+		return err
 	}
 
 	return nil

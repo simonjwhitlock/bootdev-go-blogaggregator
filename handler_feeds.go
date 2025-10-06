@@ -9,14 +9,9 @@ import (
 	"github.com/simonjwhitlock/bootdev-go-blogaggregator/internal/database"
 )
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
 		return fmt.Errorf("usage: %s <name> <url>", cmd.Name)
-	}
-
-	currentUser, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return err
 	}
 
 	feedParams := database.AddFeedParams{
@@ -25,7 +20,7 @@ func handlerAddFeed(s *state, cmd command) error {
 		UpdatedAt: time.Now(),
 		Name:      cmd.Args[0],
 		Url:       cmd.Args[1],
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 	}
 
 	newFeed, err := s.db.AddFeed(context.Background(), feedParams)
@@ -37,7 +32,7 @@ func handlerAddFeed(s *state, cmd command) error {
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 		FeedID:    newFeed.ID,
 	}
 	_, err = s.db.CreateFeedFollow(context.Background(), feedFollowParams)
