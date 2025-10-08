@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/simonjwhitlock/bootdev-go-blogaggregator/internal/database"
 )
 
 var aggURL = "https://www.wagslane.dev/index.xml"
@@ -76,4 +78,30 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	}
 
 	return &rssFeed, nil
+}
+
+func scrapeFeeds(s *state) {
+	feedToFetch, err := s.db.GetNextFeedToFetch()
+	if err != nil {
+		fmt.Println("failed to find feed to fetch: %w", err)
+		return
+	}
+	markFetchedParams := database.MarkFeedFetchedParams{
+		ID:            feedToFetch.ID,
+		LastFetchedAt: time.Now(),
+	}
+	err = s.db.MarkFeedFetched(context.Background(), markFetchedParams)
+	if err != nil {
+		fmt.Println("failed to mark feed as fetched: %w", err)
+		return
+	}
+	fetchedFeed, err := fetchFeed(context.Background(), feedToFetch.Url)
+	if err != nil {
+		fmt.Println("failed to fetch feed: %w", err)
+		return
+	}
+	for _, item := range fetchedFeed {
+
+	}
+
 }
