@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -15,13 +16,18 @@ import (
 var aggURL = "https://www.wagslane.dev/index.xml"
 
 func handlerAgg(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), aggURL)
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("usage: %s <time interval>", cmd.Name)
+	}
+	timeBetweenRequests, err := time.ParseDuration(cmd.Args[0])
 	if err != nil {
-		return fmt.Errorf("error retreving rss feed: %w", err)
+		return fmt.Errorf("error parsing time interval: %w", err)
 	}
 
-	fmt.Printf("Feed: %+v\n", feed)
-
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 	return nil
 }
 
@@ -81,14 +87,19 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 }
 
 func scrapeFeeds(s *state) {
-	feedToFetch, err := s.db.GetNextFeedToFetch()
+	feedToFetch, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
 		fmt.Println("failed to find feed to fetch: %w", err)
 		return
 	}
+	fetchedTime := sql.NullTime{
+		Time:  time.Now(),
+		Valid: true,
+	}
+
 	markFetchedParams := database.MarkFeedFetchedParams{
 		ID:            feedToFetch.ID,
-		LastFetchedAt: time.Now(),
+		LastFetchedAt: fetchedTime,
 	}
 	err = s.db.MarkFeedFetched(context.Background(), markFetchedParams)
 	if err != nil {
@@ -100,8 +111,12 @@ func scrapeFeeds(s *state) {
 		fmt.Println("failed to fetch feed: %w", err)
 		return
 	}
-	for _, item := range fetchedFeed {
 
+	fmt.Printf("fetched: %v\n***********************\n", fetchedFeed.Channel.Title)
+	for _, item := range fetchedFeed.Channel.Item {
+		fmt.Println(item.Title)
 	}
 
+	fmt.Printf("***********************\n\n")
+	return
 }

@@ -56,6 +56,7 @@ func handlerFeeds(s *state, cmd command) error {
 	for _, feed := range feedsList {
 		fmt.Printf("Feed Name: %v\n", feed.Name)
 		fmt.Printf("Feed URL: %v\n", feed.Url)
+		fmt.Printf("Feed last feched time: %v\n", feed.LastFetchedTime)
 		fmt.Printf("Feed User: %v\n\n", feed.UserName)
 	}
 
